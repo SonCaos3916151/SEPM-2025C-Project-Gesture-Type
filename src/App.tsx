@@ -1,56 +1,39 @@
-import { Authenticator } from '@aws-amplify/ui-react';
-import '@aws-amplify/ui-react/styles.css';
-import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '../amplify/data/resource';
-import { useState } from 'react';
+import { useEffect, useState } from "react";
+import type { Schema } from "../amplify/data/resource";
+import { generateClient } from "aws-amplify/data";
 
-// Connect to the backend
 const client = generateClient<Schema>();
 
 function App() {
-  const [status, setStatus] = useState("Idle");
+  const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
 
-  // A simple function to test if the database is working
-  const createProfile = async () => {
-    try {
-      setStatus("Creating Profile...");
-      // This uses the 'UserProfile' table we defined in resource.ts
-      const { errors, data: newProfile } = await client.models.UserProfile.create({
-        displayName: "New Player",
-        email: "player@example.com",
-        dataConsent: true,
-        lastLogin: new Date().toISOString()
-      });
+  useEffect(() => {
+    client.models.Todo.observeQuery().subscribe({
+      next: (data) => setTodos([...data.items]),
+    });
+  }, []);
 
-      if (errors) throw errors;
-      setStatus(`Success! Created profile ID: ${newProfile.id}`);
-    } catch (e) {
-      console.error(e);
-      setStatus("Error creating profile (check console)");
-    }
-  };
+  function createTodo() {
+    client.models.Todo.create({ content: window.prompt("Todo content") });
+  }
 
   return (
-    <Authenticator>
-      {({ signOut, user }) => (
-        <main style={{ padding: '2rem', textAlign: 'center' }}>
-          <h1>Gesture Type MVP</h1>
-          <p>Welcome, {user?.signInDetails?.loginId}</p>
-          
-          <div style={{ margin: '20px 0', padding: '20px', border: '1px solid #ccc' }}>
-            <h3>Database Connection Test</h3>
-            <p>Status: <strong>{status}</strong></p>
-            <button onClick={createProfile}>
-              Initialize My User Profile
-            </button>
-          </div>
-
-          <button onClick={signOut} style={{ marginTop: '20px' }}>
-            Sign out
-          </button>
-        </main>
-      )}
-    </Authenticator>
+    <main>
+      <h1>My todos</h1>
+      <button onClick={createTodo}>+ new</button>
+      <ul>
+        {todos.map((todo) => (
+          <li key={todo.id}>{todo.content}</li>
+        ))}
+      </ul>
+      <div>
+        🥳 App successfully hosted. Try creating a new todo.
+        <br />
+        <a href="https://docs.amplify.aws/react/start/quickstart/#make-frontend-updates">
+          Review next step of this tutorial.
+        </a>
+      </div>
+    </main>
   );
 }
 
